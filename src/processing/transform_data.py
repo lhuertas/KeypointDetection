@@ -2,9 +2,11 @@ import numpy as np
 import tensorflow as tf
 import cv2
 from os import environ
-from configs import default_config as cfg, storage_config as storage_cfg
+from src.configs import default_config as cfg, storage_config as storage_cfg
 from pycocotools.coco import COCO
-environ["CUDA_VISIBLE_DEVICES"]="-1"
+import requests
+import urllib
+
 
 if "DEBUG" in environ:  # useful for debugging imgs with sciview
     import matplotlib
@@ -201,7 +203,7 @@ def coco_to_TFrecords(keypoint_annotations_file, transformed_annotations_file, c
     imgIds.sort()
     print("Found %d images" % len(imgIds))
 
-    files_path = transformed_annotations_file + "-{:03}.tfrecords"
+    files_path = transformed_annotations_file + "{:03}.tfrecords"
     with FileSharder(tf.io.TFRecordWriter, files_path, config.IMAGES_PER_TFRECORD) as writer:
         for img_id in imgIds:
             img_info = coco.loadImgs(img_id)[0]
@@ -246,12 +248,24 @@ def coco_to_TFrecords(keypoint_annotations_file, transformed_annotations_file, c
             total_mask = np.invert(total_mask)  # invert for loss multiplication later
             total_mask = total_mask.astype(np.float32)
 
-            try:
-                img_path = config.IMAGES_PATH + "/" + img_info['file_name']
-                image_raw = tf.io.read_file(img_path)
-            except:
-                print("Couldn't read file %s" % img_path)
-                continue
+            if cfg.STORAGE_LOCAL:
+                try:
+                    img_path = config.IMAGES_PATH + "/" + img_info['file_name']
+                    image_raw = tf.io.read_file(img_path)
+                except:
+                    print("Couldn't read file %s" % img_path)
+                    continue
+
+            else:
+                try:
+                    img_url = img_info['coco_url']
+                    req = urllib.request.Request(img_url)
+                    response = urllib.request.urlopen(req)
+                    image_data = response.read()
+                    image_raw = tf.convert_to_tensor(image_data)
+                except:
+                    print("Couldn't read file %s" % img_path)
+                    continue
 
             example = encode_example(img_id, image_raw, size, tr_keypoints, tr_joint, total_mask)
             writer.write(example)

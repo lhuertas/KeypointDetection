@@ -1,4 +1,4 @@
-from configs.keypoints_config import *
+from src.configs.keypoints_config import *
 
 TPU_MODE = False
 RUN_NAME = ""
@@ -7,7 +7,7 @@ INCLUDE_MASK = True
 SAVE_CHECKPOINTS = True
 SAVE_TENSORBOARD = True
 ASK_FOR_CHECKPOINTS = True
-
+TRAIN_FOOT_KEYPOINTS = True
 
 # this determines the size images will be resized to, and the size of the labels created
 IMAGE_WIDTH = 368
